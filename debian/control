@@ -1,0 +1,20 @@
+Source: rufus-json
+Section: ruby
+Priority: optional
+Maintainer: Debian Ruby Extras Maintainers <pkg-ruby-extras-maintainers@lists.alioth.debian.org>
+Uploaders:  <>
+DM-Upload-Allowed: yes
+Build-Depends: debhelper (>= 7.0.50~), gem2deb (>= 0.1.0)
+Standards-Version: 3.9.1
+#Vcs-Git: git://git.debian.org/collab-maint/libnet-jabber-loudmouth-perl.git
+#Vcs-Browser: http://git.debian.org/?p=collab-maint/libnet-jabber-loudmouth-perl.git;a=summary
+Homepage: http://github.com/jmettraux/rufus-json/
+
+Package: ruby-rufus-json
+Architecture: all
+Depends: ${shlibs:Depends}, ${misc:Depends}
+# json (>= 0), yajl-ruby (>= 0), activesupport (>= 0), rake (>= 0), yard (>= 0), jeweler (>= 0)
+Description: One interface to various JSON ruby libs (yajl, json, json_pure, json-jruby, active_support). Has a preference for yajl.
+ .\n One interface to various JSON ruby libs (yajl, json, json_pure, json-jruby, active_support). Has a preference for yajl.
+ .\n
+
