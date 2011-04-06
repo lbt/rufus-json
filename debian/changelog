@@ -1,4 +1,10 @@
-rufus-json (0.2.5-1) UNRELEASED; urgency=low
+ruby-rufus-json (0.2.5-2) unstable; urgency=low
+
+  * Update to gem2deb 0.2.1
+
+ -- David Greaves <david@dgreaves.com>  Wed, 06 Apr 2011 20:54:40 +0100
+
+ruby-rufus-json (0.2.5-1) UNRELEASED; urgency=low
 
   * Initial release based on gem2deb
 
