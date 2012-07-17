@@ -17,8 +17,8 @@
 
 # norootforbuild
 Name:           rubygem-rufus-json
-Version:        0.2.5
-Release:        0
+Version:        1.0.2
+Release:        1
 %define mod_name rufus-json
 #
 Group:          Development/Languages/Ruby
