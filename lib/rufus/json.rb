@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009-2010, John Mettraux, jmettraux@gmail.com
+# Copyright (c) 2009-2012, John Mettraux, jmettraux@gmail.com
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,16 +22,18 @@
 # Made in Japan.
 #++
 
+require 'ostruct'
+
 
 module Rufus
 module Json
 
-  VERSION = '0.2.5'
+  VERSION = '1.0.2'
 
   # The JSON / JSON pure decoder
   #
-  JSON = [
-    lambda { |o, opts|
+  JSON = OpenStruct.new(
+    :encode => lambda { |o, opts|
       opts[:max_nesting] = false unless opts.has_key?(:max_nesting)
       if o.is_a?(Hash) or o.is_a?(Array)
         ::JSON.generate(o, opts)
@@ -39,35 +41,79 @@ module Json
         ::JSON.generate([ o ], opts).strip[1..-2]
       end
     },
-    lambda { |s| ::JSON.parse("[#{s}]", :max_nesting => nil).first },
-    lambda { ::JSON::ParserError }
-  ]
+    :pretty_encode => lambda { |o|
+      encode(
+        o,
+        :indent => '  ', :object_nl => "\n", :array_nl => "\n", :space => ' ')
+    },
+    :decode => lambda { |s|
+      ::JSON.parse("[#{s}]", :max_nesting => nil).first },
+    :error => lambda {
+      ::JSON::ParserError }
+  )
 
   # The Rails ActiveSupport::JSON decoder
   #
-  ACTIVE_SUPPORT = [
-    lambda { |o, opts| ActiveSupport::JSON.encode(o, opts) },
-    lambda { |s| decode_e(s) || ActiveSupport::JSON.decode(s) },
-    #lambda { ::ActiveSupport::JSON::ParseError }
-    lambda { RuntimeError }
-  ]
+  ACTIVE_SUPPORT = OpenStruct.new(
+    :encode => lambda { |o, opts|
+      ActiveSupport::JSON.encode(o, opts) },
+    :pretty_encode => lambda { |o|
+      ActiveSupport::JSON.encode(o) },
+    :decode => lambda { |s|
+      decode_e(s) || ActiveSupport::JSON.decode(s) },
+    :error => lambda {
+      RuntimeError }
+  )
   ACTIVE = ACTIVE_SUPPORT
 
   # http://github.com/brianmario/yajl-ruby/
   #
-  YAJL = [
-    lambda { |o, opts| Yajl::Encoder.encode(o, opts) },
-    lambda { |s| Yajl::Parser.parse(s) },
-    lambda { ::Yajl::ParseError }
-  ]
+  YAJL = OpenStruct.new(
+    :encode => lambda { |o, opts|
+      Yajl::Encoder.encode(o, opts) },
+    :pretty_encode => lambda { |o|
+      Yajl::Encoder.encode(o, :pretty => true, :indent => '  ') },
+    :decode => lambda { |s|
+      Yajl::Parser.parse(s) },
+    :error => lambda {
+      ::Yajl::ParseError }
+  )
 
   # The "raise an exception because there's no backend" backend
   #
-  NONE = [
-    lambda { |o, opts| raise 'no JSON backend found' },
-    lambda { |s| raise 'no JSON backend found' },
-    lambda { raise 'no JSON backend found' }
-  ]
+  NONE = OpenStruct.new(
+    :encode => lambda { |o, opts| raise 'no JSON backend found' },
+    :pretty_encode => lambda { |o| raise 'no JSON backend found' },
+    :decode => lambda { |s| raise 'no JSON backend found' },
+    :error => lambda { raise 'no JSON backend found' }
+  )
+
+  # In the given order, attempts to load a json lib and sets it as the
+  # backend of rufus-json.
+  #
+  # Returns the name of lib found if sucessful.
+  #
+  # Returns nil if no lib could be set.
+  #
+  # The default order / list of backends is yajl, active_support, json,
+  # json/pure. When specifying a custom order/list, unspecified backends
+  # won't be tried for.
+  #
+  def self.load_backend(*order)
+
+    order = %w[ yajl active_support json json/pure ] if order.empty?
+
+    order.each do |lib|
+      begin
+        require(lib)
+        Rufus::Json.backend = lib
+        return lib
+      rescue LoadError => le
+      end
+    end
+
+    nil
+  end
 
   # [Re-]Attempts to detect a JSON backend
   #
@@ -108,51 +154,61 @@ module Json
   #
   # It's OK to pass a symbol as well, :yajl, :json, :active (or :none).
   #
-  def self.backend= (b)
+  def self.backend=(b)
 
-    if b.is_a?(Symbol)
-      b = { :yajl => YAJL, :json => JSON, :active => ACTIVE, :none => NONE }[b]
-    end
+    b = {
+      'yajl' => YAJL, 'yajl-ruby' => YAJL,
+      'json' => JSON, 'json-pure' => JSON,
+      'active' => ACTIVE, 'active-support' => ACTIVE,
+      'none' => NONE
+    }[b.to_s.gsub(/[_\/]/, '-')] if b.is_a?(String) or b.is_a?(Symbol)
 
     @backend = b
   end
 
   # Encodes the given object to a JSON string.
   #
-  def self.encode (o, opts={})
+  def self.encode(o, opts={})
 
-    @backend[0].call(o, opts)
+    @backend.encode[o, opts]
   end
 
   # Pretty encoding
   #
-  def self.pretty_encode (o)
+  def self.pretty_encode(o)
 
-    case @backend
-      when JSON
-        encode(o, :indent => '  ', :object_nl => "\n", :array_nl => "\n", :space => ' ')
-      when YAJL
-        encode(o, :pretty => true, :indent => '  ')
-      else
-        encode(o)
-    end
+    @backend.pretty_encode[o]
+  end
+
+  # An alias for .encode
+  #
+  def self.dump(o, opts={})
+
+    encode(o, opts)
   end
 
   # Decodes the given JSON string.
   #
-  def self.decode (s)
+  def self.decode(s)
 
-    @backend[1].call(s)
+    @backend.decode[s]
 
-  rescue @backend[2].call => e
+  rescue @backend.error[] => e
     raise ParserError.new(e.message)
+  end
+
+  # An alias for .decode
+  #
+  def self.load(s)
+
+    decode(s)
   end
 
   # Duplicates an object by turning it into JSON and back.
   #
   # Don't laugh, yajl-ruby makes that faster than a Marshal copy.
   #
-  def self.dup (o)
+  def self.dup(o)
 
     (@backend == NONE) ? Marshal.load(Marshal.dump(o)) : decode(encode(o))
   end
@@ -161,7 +217,7 @@ module Json
 
   # Let's ActiveSupport do the E number notation.
   #
-  def self.decode_e (s)
+  def self.decode_e(s)
 
     s.match(E_REGEX) ? eval(s) : false
   end

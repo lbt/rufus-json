@@ -2,6 +2,26 @@
 = rufus-json CHANGELOG.txt
 
 
+== rufus-json - 1.0.2    not yet released
+
+
+== rufus-json - 1.0.1    released 2011/06/01
+
+- require 'rufus-json/automatic' ('one require' rufus-json)
+- Rufus::Json.load_backend(*order)
+
+
+== rufus-json - 1.0.0    released 2011/05/25
+
+- reaching 1.0.0 finally
+
+
+== rufus-json - 0.2.7    released 2011/05/20
+== rufus-json - 0.2.6    released 2011/05/20
+
+- Rufus::Json .dump and .load (aliases to .encode/.decode). Thanks @tenderlove
+
+
 == rufus-json - 0.2.5    released 2010/08/10
 
 - Rufus::Json.encode(o) now accepting string, numbers, boolean and null
